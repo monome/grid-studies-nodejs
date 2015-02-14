@@ -1,0 +1,22 @@
+{
+  "name": "grid-studies-nodejs",
+  "version": "0.0.0",
+  "description": "grid tutorials for node.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/monome/grid-studies-nodejs.git"
+  },
+  "author": "Tom Dinchak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/monome/grid-studies-nodejs/issues"
+  },
+  "homepage": "https://github.com/monome/grid-studies-nodejs",
+  "dependencies": {
+    "monome-grid": "0.0.2"
+  }
+}
