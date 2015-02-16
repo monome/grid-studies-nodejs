@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/monome/grid-studies-nodejs",
   "dependencies": {
-    "monome-grid": "0.0.2"
+    "monome-grid": "0.0.3"
   }
 }
