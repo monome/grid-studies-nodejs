@@ -2,7 +2,7 @@
 
 <head>
 <meta charset="utf-8">
-<title>Grid Studies: node.js</title>
+<title>index</title>
 <style type="text/css">
 body {
   font-family: Helvetica, arial, sans-serif;
@@ -463,16 +463,88 @@ pre[class*="language-"] {
 
 <p>Download the code examples here: <a href="https://github.com/monome/grid-studies-nodejs/releases/latest">github.com/monome/grid-studies-nodejs/releases/latest</a></p>
 
-<h2 id="toc_2">Library Setup</h2>
+<h2 id="toc_2">Initial Project Setup</h2>
 
-<p>Open a terminal window and navigate to the grid-studies-nodejs directory.  Once there, run <code>npm install</code> to install the monome-grid library from NPM.  You can then run the examples in the <code>files</code> subdirectory:</p>
+<p>Open a terminal window and create a new folder:  </p>
 
-<pre><code>$ cd ~/Downloads/grid-studies-nodejs
-$ npm install
-monome-grid@0.0.2 node_modules/monome-grid
-  serialosc@0.0.3 (underscore@1.7.0, osc-receiver@1.1.0, osc-emitter@1.0.0)
-$ cd files
-$ node grid_studies_2.js</code></pre>
+<pre><code>$ mkdir grid-studies
+$ cd grid-studies</code></pre>
+
+<p>Once there, run <code>npm init</code> to create a <code>package.json</code> file.  Just push enter on each of the prompts after running <code>npm init</code>:</p>
+
+<pre><code>$ npm init
+This utility will walk you through creating a package.json file.
+It only covers the most common items, and tries to guess sane defaults.
+
+See `npm help json` for definitive documentation on these fields
+and exactly what they do.
+
+Use `npm install &lt;pkg&gt; --save` afterwards to install a package and
+save it as a dependency in the package.json file.
+
+Press ^C at any time to quit.
+name: (grid-studies) 
+version: (0.0.0) 
+description: 
+entry point: (index.js) 
+test command: 
+git repository: 
+keywords: 
+author: 
+license: (ISC) 
+About to write to /Users/mac/grid-studies/package.json:
+
+{
+  &quot;name&quot;: &quot;grid-studies&quot;,
+  &quot;version&quot;: &quot;0.0.0&quot;,
+  &quot;description&quot;: &quot;&quot;,
+  &quot;main&quot;: &quot;index.js&quot;,
+  &quot;scripts&quot;: {
+    &quot;test&quot;: &quot;echo \&quot;Error: no test specified\&quot; &amp;&amp; exit 1&quot;
+  },
+  &quot;author&quot;: &quot;&quot;,
+  &quot;license&quot;: &quot;ISC&quot;
+}
+
+
+Is this ok? (yes)</code></pre>
+
+<p>Next install the <code>monome-grid</code> library:</p>
+
+<pre><code>$ npm install --save monome-grid
+npm WARN package.json grid-studies@0.0.0 No description
+npm WARN package.json grid-studies@0.0.0 No repository field.
+npm WARN package.json grid-studies@0.0.0 No README data
+ 
+&gt; uvrun@0.1.2 install /Users/mac/grid-studies/node_modules/monome-grid/node_modules/uvrun
+&gt; node-gyp rebuild
+
+  CXX(target) Release/obj.target/uvrun/uvrun.o
+  SOLINK_MODULE(target) Release/uvrun.node
+  SOLINK_MODULE(target) Release/uvrun.node: Finished
+monome-grid@0.0.4 node_modules/monome-grid
+  uvrun@0.1.2
+  serialosc@0.0.4 (underscore@1.7.0, osc-emitter@1.0.0, osc-receiver@1.1.0)</code></pre>
+
+<p>Now install the <code>easymidi</code> library:</p>
+
+<pre><code>$ npm install --save easymidi
+npm WARN package.json grid-studies@0.0.0 No description
+npm WARN package.json grid-studies@0.0.0 No repository field.
+npm WARN package.json grid-studies@0.0.0 No README data
+ 
+&gt; midi@0.9.1 install /Users/mac/grid-studies/node_modules/easymidi/node_modules/midi
+&gt; node-gyp rebuild
+
+  CXX(target) Release/obj.target/midi/src/node-midi.o
+  SOLINK_MODULE(target) Release/midi.node
+  SOLINK_MODULE(target) Release/midi.node: Finished
+easymidi@0.0.2 node_modules/easymidi
+  midi@0.9.1 (bindings@1.2.1, nan@1.6.2)</code></pre>
+
+<p>You can now copy the examples to this folder and run them using the <code>node</code> command:</p>
+
+<pre><code>$ node grid_studies_2.js</code></pre>
 
 <h2 id="toc_3">1. Connect</h2>
 
