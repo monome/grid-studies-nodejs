@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/monome/grid-studies-nodejs",
   "dependencies": {
+    "easymidi": "0.0.2",
     "monome-grid": "0.0.4"
   }
 }
