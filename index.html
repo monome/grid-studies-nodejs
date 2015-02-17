@@ -712,7 +712,7 @@ for(int y=0;y&lt;6;y++)
 
 <p>This simply prints on the console.  We could have this trigger a MIDI note for example.</p>
 
-<h3 id="toc_13">3.4 Cutting</h3>
+<h3 id="toc_13">3.4a Cutting</h3>
 
 <p><em>See grid_studies_3_4.js for this step.</em></p>
 
@@ -752,7 +752,7 @@ for(int y=0;y&lt;6;y++)
 
 <p>Now, when pressing keys on the bottom row it will cue the next position to be played. Note that we set <code>cutting = false</code> after each cycle so that each press only affects the timer once.</p>
 
-<h3 id="toc_14">3.5 Loop</h3>
+<h3 id="toc_14">3.4b Loop</h3>
 
 <p>Lastly, we&#39;ll implement setting the loop start and end points with a two-press gesture: pressing and holding the start point, and pressing an end point while still holding the first key. We&#39;ll need to add a variable to count keys held, one to track the last key pressed, and variables to store the loop positions.</p>
 
@@ -789,7 +789,7 @@ else if(y == 7) {
 
 <p>We then modify the position change code:</p>
 
-<pre><code class="language-java">if(timer == STEP_TIME) {
+<pre><code class="language-javascript">if(timer == STEP_TIME) {
     if(cutting)
         play_position = next_position;
     else if(play_position == 15)
@@ -801,9 +801,123 @@ else if(y == 7) {
 
 <p>Done!</p>
 
-<h2 id="toc_15">Closing</h2>
+<h3 id="toc_15">3.5a Sending MIDI Notes</h3>
 
-<h3 id="toc_16">Suggested Excercises</h3>
+<p>Let&#39;s make it actually send some MIDI notes.  The <code>easymidi</code> module can be used to create and listen to all types of MIDI events.  First we&#39;ll get some basic initialization out of the way by loading the <code>easymidi</code> module and creating a virtual MIDI input and output:</p>
+
+<pre><code class="language-javascript">var easymidi = require(&#39;easymidi&#39;);
+
+var output = new easymidi.Output(&#39;grid out&#39;, true);
+var input = new easymidi.Input(&#39;grid in&#39;, true);</code></pre>
+
+<p>Next let&#39;s implement the trigger method and make it actually do something.  We&#39;re going to add a new variable called <code>type</code> that will take the values <code>noteon</code> or <code>noteoff</code>:</p>
+
+<pre><code class="language-javascript">function trigger(type, i) {
+  output.send(type, {
+    note: 36 + i,
+    velocity: 127,
+    channel: 0
+  });
+}</code></pre>
+
+<p>Next we need to modify the code that calls trigger to pass it the <code>type</code> argument.  We&#39;ll need to send both &quot;noteon&quot; and &quot;noteoff&quot; messages to avoid leaving hanging notes.  To do this we&#39;ll calculate the <code>last_play_position</code> and use it to trigger &quot;noteoff&quot; messages while sending &quot;noteon&quot; messages to the current play_position:</p>
+
+<pre><code class="language-javascript">// TRIGGER SOMETHING
+var last_play_position = play_position - 1;
+if(last_play_position == -1)
+  last_play_position = 15;
+for(var y=0;y&lt;6;y++) {
+  if(step[y][last_play_position] == 1)
+    trigger(&#39;noteoff&#39;, y);
+  if(step[y][play_position] == 1)
+    trigger(&#39;noteon&#39;, y);
+}</code></pre>
+
+<p>Now if you open Ableton Live for example, you should see a &quot;grid out&quot; device that you can enable and route to an instrument.  You can also route the notes to a real MIDI device by changing this line:</p>
+
+<pre><code class="language-javascript">var output = new easymidi.Output(&#39;grid out&#39;, true);</code></pre>
+
+<p>To something like this:</p>
+
+<pre><code class="language-javascript">var output = new easymidi.Output(&#39;Real Device Name&#39;);</code></pre>
+
+<p>The <code>true</code> argument means create a virtual device so don&#39;t use that when interfacing with a real MIDI output.  If you aren&#39;t sure what the names of your devices are you can create a small script to check:</p>
+
+<pre><code class="language-javascript">var easymidi = require(&#39;easymidi&#39;);
+console.log(easymidi.getOutputs());</code></pre>
+
+<p>Save this as <code>listmidi.js</code> and run it on the command line with <code>node listmidi.js</code>.  You should see an array of device names.</p>
+
+<h3 id="toc_16">3.5b MIDI Clock Sync</h3>
+
+<p>Now we&#39;ll make the sequencer respond to MIDI clock messages.  First, we can delete the STEP_TIME and timer variables as they are no longer needed.  We&#39;ll also want to move the code that handles timing out of the <code>refresh()</code> function and into a few event handlers.  Here&#39;s the main event handler to listen for midi clock messages:</p>
+
+<pre><code class="language-javascript">var ticks = 0;
+
+input.on(&#39;clock&#39;, function () {
+  ticks++;
+  if(ticks % 12 != 0)
+    return;
+
+  if(cutting)
+    play_position = next_position;
+  else if(play_position == 15)
+    play_position = 0;
+  else if(play_position == loop_end)
+    play_position = loop_start;
+  else
+    play_position++;
+
+  // TRIGGER SOMETHING
+  var last_play_position = play_position - 1;
+  if(last_play_position == -1)
+    last_play_position = 15;
+  for(var y=0;y&lt;6;y++) {
+    if(step[y][last_play_position] == 1)
+      trigger(&#39;noteoff&#39;, y);
+    if(step[y][play_position] == 1)
+      trigger(&#39;noteon&#39;, y);
+  }
+
+  cutting = false;
+  dirty = true;
+});</code></pre>
+
+<p>This is mostly a re-arrangement of existing code but there is a new variable called <code>ticks</code> that we&#39;ll use to keep track of the number of MIDI clock messages we&#39;ve received.  This function will get called every time a &#39;clock&#39; message is received on the input device (our virtual MIDI device named &quot;grid in&quot;).</p>
+
+<p>MIDI clock messages come in at a rate of 96 per measure, so on each tick we&#39;ll check if it&#39;s divisible evenly by 12 to provide 8th note resolution:</p>
+
+<pre><code class="language-javascript">  ticks++;
+  if(ticks % 12 != 0)
+    return;</code></pre>
+
+<p>First we increment <code>ticks</code> and then do the divisibility check.  If it&#39;s not divisible by 12 we&#39;ll return out of the function and wait for the next tick.  If it is divisible we&#39;ll advance the play_position and trigger noteoff/noteon messages as needed.</p>
+
+<p>This mostly works but we need to account for a few other MIDI messages.  For example, this won&#39;t trigger notes in the first <code>play_position</code>.  To trigger these notes we&#39;ll listen for the &#39;start&#39; MIDI message:</p>
+
+<pre><code class="language-javascript">input.on(&#39;start&#39;, function () {
+  for(var y=0;y&lt;6;y++)
+    if(step[y][play_position] == 1)
+      trigger(&#39;noteon&#39;, y);
+});</code></pre>
+
+<p>Another issue we have is that if we reset the play position to 0 in our DAW we we still might be halfway through playing the segment on the sequencer.  We should reset the <code>play_position</code> and <code>ticks</code> if this occurs:</p>
+
+<p>input.on(&#39;position&#39;, function (data) {
+  if(data.value != 0)
+    return;
+  ticks = 0;
+  play<em>position = 0;
+  if(loop</em>start)
+    play<em>position = loop</em>start;
+  dirty = true;
+});</p>
+
+<p>And that&#39;s it! We have a fully functioning MIDI sequencer that can sync to MIDI clock and trigger notes.  To try it out in Ableton, simply turn on the &quot;sync&quot; option for the &quot;grid in&quot; MIDI device and turn on the &quot;track&quot; option for the &quot;grid out&quot; device (and route it to an instrument).  See <code>grid_studies_3_5.js</code> for the completed MIDI implementation.</p>
+
+<h2 id="toc_17">Closing</h2>
+
+<h3 id="toc_18">Suggested Excercises</h3>
 
 <ul>
 <li>&quot;Record&quot; keypresses in the &quot;trigger&quot; row to the toggle matrix.</li>
@@ -814,9 +928,10 @@ else if(y == 7) {
 <li>If &quot;alt&quot; is held while pressing a toggle, clear the entire row.</li>
 <li>If &quot;alt&quot; is held while pressing the play row, reverse the direction of play.</li>
 </ul></li>
+<li>Synchronize ticks/play_position based on the value coming in to the &#39;position&#39; MIDI message (if it&#39;s non-zero).</li>
 </ul>
 
-<h2 id="toc_17">Credits</h2>
+<h2 id="toc_19">Credits</h2>
 
 <p><em>Node.js</em> is maintained by the <a href="http://www.joyent.com">Joyent</a>.</p>
 
@@ -833,10 +948,10 @@ self="undefined"!=typeof window?window:"undefined"!=typeof WorkerGlobalScope&&se
 Prism.languages.clike={comment:[{pattern:/(^|[^\\])\/\*[\w\W]*?\*\//g,lookbehind:!0},{pattern:/(^|[^\\:])\/\/.*?(\r?\n|$)/g,lookbehind:!0}],string:/("|')(\\\n|\\?.)*?\1/g,"class-name":{pattern:/((?:(?:class|interface|extends|implements|trait|instanceof|new)\s+)|(?:catch\s+\())[a-z0-9_\.\\]+/gi,lookbehind:!0,inside:{punctuation:/(\.|\\)/}},keyword:/\b(if|else|while|do|for|return|in|instanceof|function|new|try|throw|catch|finally|null|break|continue)\b/g,"boolean":/\b(true|false)\b/g,"function":{pattern:/[a-z0-9_]+\(/gi,inside:{punctuation:/\(/}},number:/\b-?(0x[\dA-Fa-f]+|\d*\.?\d+([Ee]-?\d+)?)\b/g,operator:/[-+]{1,2}|!|<=?|>=?|={1,3}|&{1,2}|\|?\||\?|\*|\/|~|\^|%/g,ignore:/&(lt|gt|amp);/gi,punctuation:/[{}[\];(),.:]/g};
 </script>
 <script type="text/javascript">
-Prism.languages.java=Prism.languages.extend("clike",{keyword:/\b(abstract|continue|for|new|switch|assert|default|goto|package|synchronized|boolean|do|if|private|this|break|double|implements|protected|throw|byte|else|import|public|throws|case|enum|instanceof|return|transient|catch|extends|int|short|try|char|final|interface|static|void|class|finally|long|strictfp|volatile|const|float|native|super|while)\b/g,number:/\b0b[01]+\b|\b0x[\da-f]*\.?[\da-fp\-]+\b|\b\d*\.?\d+[e]?[\d]*[df]\b|\b\d*\.?\d+\b/gi,operator:{pattern:/(^|[^\.])(?:\+=|\+\+?|-=|--?|!=?|<{1,2}=?|>{1,3}=?|==?|&=|&&?|\|=|\|\|?|\?|\*=?|\/=?|%=?|\^=?|:|~)/gm,lookbehind:!0}});
+Prism.languages.javascript=Prism.languages.extend("clike",{keyword:/\b(break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|get|if|implements|import|in|instanceof|interface|let|new|null|package|private|protected|public|return|set|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield)\b/g,number:/\b-?(0x[\dA-Fa-f]+|\d*\.?\d+([Ee][+-]?\d+)?|NaN|-?Infinity)\b/g,"function":/(?!\d)[a-z0-9_$]+(?=\()/gi}),Prism.languages.insertBefore("javascript","keyword",{regex:{pattern:/(^|[^/])\/(?!\/)(\[.+?]|\\.|[^/\r\n])+\/[gim]{0,3}(?=\s*($|[\r\n,.;})]))/g,lookbehind:!0}}),Prism.languages.markup&&Prism.languages.insertBefore("markup","tag",{script:{pattern:/<script[\w\W]*?>[\w\W]*?<\/script>/gi,inside:{tag:{pattern:/<script[\w\W]*?>|<\/script>/gi,inside:Prism.languages.markup.tag.inside},rest:Prism.languages.javascript},alias:"language-javascript"}});
 </script>
 <script type="text/javascript">
-Prism.languages.javascript=Prism.languages.extend("clike",{keyword:/\b(break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|get|if|implements|import|in|instanceof|interface|let|new|null|package|private|protected|public|return|set|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield)\b/g,number:/\b-?(0x[\dA-Fa-f]+|\d*\.?\d+([Ee][+-]?\d+)?|NaN|-?Infinity)\b/g,"function":/(?!\d)[a-z0-9_$]+(?=\()/gi}),Prism.languages.insertBefore("javascript","keyword",{regex:{pattern:/(^|[^/])\/(?!\/)(\[.+?]|\\.|[^/\r\n])+\/[gim]{0,3}(?=\s*($|[\r\n,.;})]))/g,lookbehind:!0}}),Prism.languages.markup&&Prism.languages.insertBefore("markup","tag",{script:{pattern:/<script[\w\W]*?>[\w\W]*?<\/script>/gi,inside:{tag:{pattern:/<script[\w\W]*?>|<\/script>/gi,inside:Prism.languages.markup.tag.inside},rest:Prism.languages.javascript},alias:"language-javascript"}});
+Prism.languages.java=Prism.languages.extend("clike",{keyword:/\b(abstract|continue|for|new|switch|assert|default|goto|package|synchronized|boolean|do|if|private|this|break|double|implements|protected|throw|byte|else|import|public|throws|case|enum|instanceof|return|transient|catch|extends|int|short|try|char|final|interface|static|void|class|finally|long|strictfp|volatile|const|float|native|super|while)\b/g,number:/\b0b[01]+\b|\b0x[\da-f]*\.?[\da-fp\-]+\b|\b\d*\.?\d+[e]?[\d]*[df]\b|\b\d*\.?\d+\b/gi,operator:{pattern:/(^|[^\.])(?:\+=|\+\+?|-=|--?|!=?|<{1,2}=?|>{1,3}=?|==?|&=|&&?|\|=|\|\|?|\?|\*=?|\/=?|%=?|\^=?|:|~)/gm,lookbehind:!0}});
 </script>
 </body>
 

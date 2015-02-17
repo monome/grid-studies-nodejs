@@ -1,27 +1,24 @@
 var grid = require('monome-grid')();
 var easymidi = require('easymidi');
 
+var output = new easymidi.Output('grid out', true);
+var input = new easymidi.Input('grid in', true);
+
 var dirty = true;
 var step = create2DArray(6, 16);
-var timer = 0;
 var play_position = 0;
 var loop_start = 0;
 var loop_end = 15;
-var STEP_TIME = 10;
 var cutting = false;
 var next_position = 0;
 var keys_held = 0;
 var key_last = 0;
 var ticks = 0;
 
-var output = new easymidi.Output('grid out', true);
-var input = new easymidi.Input('grid in', true);
-
 input.on('clock', function () {
   ticks++;
-  if(ticks % 12 != 0) {
+  if(ticks % 12 != 0)
     return;
-  }
 
   if(cutting)
     play_position = next_position;

@@ -306,7 +306,7 @@ function trigger(i) {
 
 This simply prints on the console.  We could have this trigger a MIDI note for example.
 
-### 3.4 Cutting
+### 3.4a Cutting
 
 *See grid\_studies\_3_4.js for this step.*
 
@@ -352,7 +352,7 @@ if(timer == STEP_TIME) {
 
 Now, when pressing keys on the bottom row it will cue the next position to be played. Note that we set `cutting = false` after each cycle so that each press only affects the timer once.
 
-### 3.5 Loop
+### 3.4b Loop
 
 Lastly, we'll implement setting the loop start and end points with a two-press gesture: pressing and holding the start point, and pressing an end point while still holding the first key. We'll need to add a variable to count keys held, one to track the last key pressed, and variables to store the loop positions.
 
@@ -395,7 +395,7 @@ else if(y == 7) {
 
 We then modify the position change code:
 
-```java
+```javascript
 if(timer == STEP_TIME) {
 	if(cutting)
 		play_position = next_position;
@@ -409,6 +409,138 @@ if(timer == STEP_TIME) {
 
 Done!
 
+### 3.5a Sending MIDI Notes
+
+Let's make it actually send some MIDI notes.  The `easymidi` module can be used to create and listen to all types of MIDI events.  First we'll get some basic initialization out of the way by loading the `easymidi` module and creating a virtual MIDI input and output:
+
+```javascript
+var easymidi = require('easymidi');
+
+var output = new easymidi.Output('grid out', true);
+var input = new easymidi.Input('grid in', true);
+```
+
+Next let's implement the trigger method and make it actually do something.  We're going to add a new variable called `type` that will take the values `noteon` or `noteoff`:
+
+```javascript
+function trigger(type, i) {
+  output.send(type, {
+    note: 36 + i,
+    velocity: 127,
+    channel: 0
+  });
+}
+```
+
+Next we need to modify the code that calls trigger to pass it the `type` argument.  We'll need to send both "noteon" and "noteoff" messages to avoid leaving hanging notes.  To do this we'll calculate the `last_play_position` and use it to trigger "noteoff" messages while sending "noteon" messages to the current play_position:
+
+```javascript
+// TRIGGER SOMETHING
+var last_play_position = play_position - 1;
+if(last_play_position == -1)
+  last_play_position = 15;
+for(var y=0;y<6;y++) {
+  if(step[y][last_play_position] == 1)
+    trigger('noteoff', y);
+  if(step[y][play_position] == 1)
+    trigger('noteon', y);
+}
+```
+
+Now if you open Ableton Live for example, you should see a "grid out" device that you can enable and route to an instrument.  You can also route the notes to a real MIDI device by changing this line:
+
+```javascript
+var output = new easymidi.Output('grid out', true);
+```
+
+To something like this:
+
+```javascript
+var output = new easymidi.Output('Real Device Name');
+```
+
+The `true` argument means create a virtual device so don't use that when interfacing with a real MIDI output.  If you aren't sure what the names of your devices are you can create a small script to check:
+
+```javascript
+var easymidi = require('easymidi');
+console.log(easymidi.getOutputs());
+```
+
+Save this as `listmidi.js` and run it on the command line with `node listmidi.js`.  You should see an array of device names.
+
+### 3.5b MIDI Clock Sync
+
+Now we'll make the sequencer respond to MIDI clock messages.  First, we can delete the STEP_TIME and timer variables as they are no longer needed.  We'll also want to move the code that handles timing out of the `refresh()` function and into a few event handlers.  Here's the main event handler to listen for midi clock messages:
+
+```javascript
+var ticks = 0;
+
+input.on('clock', function () {
+  ticks++;
+  if(ticks % 12 != 0)
+    return;
+
+  if(cutting)
+    play_position = next_position;
+  else if(play_position == 15)
+    play_position = 0;
+  else if(play_position == loop_end)
+    play_position = loop_start;
+  else
+    play_position++;
+
+  // TRIGGER SOMETHING
+  var last_play_position = play_position - 1;
+  if(last_play_position == -1)
+    last_play_position = 15;
+  for(var y=0;y<6;y++) {
+    if(step[y][last_play_position] == 1)
+      trigger('noteoff', y);
+    if(step[y][play_position] == 1)
+      trigger('noteon', y);
+  }
+
+  cutting = false;
+  dirty = true;
+});
+```
+
+This is mostly a re-arrangement of existing code but there is a new variable called `ticks` that we'll use to keep track of the number of MIDI clock messages we've received.  This function will get called every time a 'clock' message is received on the input device (our virtual MIDI device named "grid in").
+
+MIDI clock messages come in at a rate of 96 per measure, so on each tick we'll check if it's divisible evenly by 12 to provide 8th note resolution:
+
+```javascript
+  ticks++;
+  if(ticks % 12 != 0)
+    return;
+```
+
+First we increment `ticks` and then do the divisibility check.  If it's not divisible by 12 we'll return out of the function and wait for the next tick.  If it is divisible we'll advance the play_position and trigger noteoff/noteon messages as needed.
+
+This mostly works but we need to account for a few other MIDI messages.  For example, this won't trigger notes in the first `play_position`.  To trigger these notes we'll listen for the 'start' MIDI message:
+
+```javascript
+input.on('start', function () {
+  for(var y=0;y<6;y++)
+    if(step[y][play_position] == 1)
+      trigger('noteon', y);
+});
+```
+
+Another issue we have is that if we reset the play position to 0 in our DAW we we still might be halfway through playing the segment on the sequencer.  We should reset the `play_position` and `ticks` if this occurs:
+
+input.on('position', function (data) {
+  if(data.value != 0)
+    return;
+  ticks = 0;
+  play_position = 0;
+  if(loop_start)
+    play_position = loop_start;
+  dirty = true;
+});
+
+And that's it! We have a fully functioning MIDI sequencer that can sync to MIDI clock and trigger notes.  To try it out in Ableton, simply turn on the "sync" option for the "grid in" MIDI device and turn on the "track" option for the "grid out" device (and route it to an instrument).  See `grid_studies_3_5.js` for the completed MIDI implementation.
+
 ## Closing
 
 ### Suggested Excercises
@@ -418,7 +550,8 @@ Done!
 - Use the rightmost key in the "trigger" row as an "alt" key.
 	- If "alt" is held while pressing a toggle, clear the entire row.
 	- If "alt" is held while pressing the play row, reverse the direction of play.
-	
+- Synchronize ticks/play_position based on the value coming in to the 'position' MIDI message (if it's non-zero).
+
 ## Credits
 
 *Node.js* is maintained by the [Joyent](http://www.joyent.com).
