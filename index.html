@@ -465,82 +465,24 @@ pre[class*="language-"] {
 
 <h2 id="toc_2">Initial Project Setup</h2>
 
-<p>Open a terminal window and create a new folder:  </p>
+<p>First install node.js.  This <a href="https://github.com/joyent/node/wiki/installation">guide</a> may be helpful.  You may need to look into <a href="https://github.com/TooTallNate/node-gyp">node-gyp</a> if you&#39;re on Windows.  This tutorial isn&#39;t recommended for new node.js users on Windows.</p>
+
+<p>Once installed, open a terminal window and create a new folder:  </p>
 
 <pre><code>$ mkdir grid-studies
 $ cd grid-studies</code></pre>
 
-<p>Once there, run <code>npm init</code> to create a <code>package.json</code> file.  Just push enter on each of the prompts after running <code>npm init</code>:</p>
+<p>Next run <code>npm init</code> to create a <code>package.json</code> file.  Just push enter on each of the prompts after running <code>npm init</code>:</p>
 
-<pre><code>$ npm init
-This utility will walk you through creating a package.json file.
-It only covers the most common items, and tries to guess sane defaults.
-
-See `npm help json` for definitive documentation on these fields
-and exactly what they do.
-
-Use `npm install &lt;pkg&gt; --save` afterwards to install a package and
-save it as a dependency in the package.json file.
-
-Press ^C at any time to quit.
-name: (grid-studies) 
-version: (0.0.0) 
-description: 
-entry point: (index.js) 
-test command: 
-git repository: 
-keywords: 
-author: 
-license: (ISC) 
-About to write to /Users/mac/grid-studies/package.json:
-
-{
-  &quot;name&quot;: &quot;grid-studies&quot;,
-  &quot;version&quot;: &quot;0.0.0&quot;,
-  &quot;description&quot;: &quot;&quot;,
-  &quot;main&quot;: &quot;index.js&quot;,
-  &quot;scripts&quot;: {
-    &quot;test&quot;: &quot;echo \&quot;Error: no test specified\&quot; &amp;&amp; exit 1&quot;
-  },
-  &quot;author&quot;: &quot;&quot;,
-  &quot;license&quot;: &quot;ISC&quot;
-}
-
-
-Is this ok? (yes)</code></pre>
+<pre><code>$ npm init</code></pre>
 
 <p>Next install the <code>monome-grid</code> library:</p>
 
-<pre><code>$ npm install --save monome-grid
-npm WARN package.json grid-studies@0.0.0 No description
-npm WARN package.json grid-studies@0.0.0 No repository field.
-npm WARN package.json grid-studies@0.0.0 No README data
- 
-&gt; uvrun@0.1.2 install /Users/mac/grid-studies/node_modules/monome-grid/node_modules/uvrun
-&gt; node-gyp rebuild
-
-  CXX(target) Release/obj.target/uvrun/uvrun.o
-  SOLINK_MODULE(target) Release/uvrun.node
-  SOLINK_MODULE(target) Release/uvrun.node: Finished
-monome-grid@0.0.4 node_modules/monome-grid
-  uvrun@0.1.2
-  serialosc@0.0.4 (underscore@1.7.0, osc-emitter@1.0.0, osc-receiver@1.1.0)</code></pre>
+<pre><code>$ npm install --save monome-grid</code></pre>
 
 <p>Now install the <code>easymidi</code> library:</p>
 
-<pre><code>$ npm install --save easymidi
-npm WARN package.json grid-studies@0.0.0 No description
-npm WARN package.json grid-studies@0.0.0 No repository field.
-npm WARN package.json grid-studies@0.0.0 No README data
- 
-&gt; midi@0.9.1 install /Users/mac/grid-studies/node_modules/easymidi/node_modules/midi
-&gt; node-gyp rebuild
-
-  CXX(target) Release/obj.target/midi/src/node-midi.o
-  SOLINK_MODULE(target) Release/midi.node
-  SOLINK_MODULE(target) Release/midi.node: Finished
-easymidi@0.0.2 node_modules/easymidi
-  midi@0.9.1 (bindings@1.2.1, nan@1.6.2)</code></pre>
+<pre><code>$ npm install --save easymidi</code></pre>
 
 <p>You can now copy the examples to this folder and run them using the <code>node</code> command:</p>
 
