@@ -57,16 +57,32 @@ $ node grid_studies_2.js
 
 ## 1. Connect
 
-The monome-grid library facilitates easy connection and communication with grids. Connect to a grid with the following code:
+The `monome-grid` library facilitates easy connection and communication with grids. It uses the modern javascript idiom of 'async/await' to reflect that grid code can't run until the grid has properly been initialised. 
+
+First, require the `monome-grid` library:
 
 ```javascript
-grid = require('monome-grid')();
+const monomeGrid = require('monome-grid');
+```
+
+Then, connect to the grid inside an asynchronous function like so:
+
+```javascript
+async function run() {
+  let grid = await monomeGrid(); 
+}
+
+run()
 ```
 
 Here the first monome device found is attached. If you want to connect to a specific grid (if you have more than one connected) you can specify a serial number, which can be found using *serialosc-monitor*.
 
-```java
-grid = require('monome-grid')('m1000011');
+```javascript
+async function run() {
+  let grid = await monomeGrid('m1000011');
+}
+
+run()
 ```
 
 The library communicates with *serialosc* to discover attached devices using OSC. For a detailed description of how the mechanism and protocol work, see [monome.org/docs/tech:osc](http://monome.org/docs/tech:osc).
@@ -85,10 +101,10 @@ The monome-grid library calls the function passed to `grid.key()` upon receiving
 	y : vertical position (0-7)
 	s : state (1 = key down, 0 = key up)
 
-Below we define the key function and simply print out incoming data.
+Inside our aysnc function, we define the key function and simply print out incoming data.
 
 ```javascript
-grid.key(function(x, y, s) {
+grid.key((x, y, s) =>  {
   console.log('key received: ' + x + ', ' + y + ', ' + s);
 });
 ```
@@ -99,11 +115,11 @@ We will, of course, do more interesting things with this function in the future.
 
 Use the `grid.refresh()` function to update the state of the LEDs on the grid. This function accepts an array which represents the entire grid, hence the full frame is updated on each call.
 
-First create the 2-dimensional array:
+First, inside the async function, create the 2-dimensional array:
 
 ```javascript
-var led = [];
-for (var y = 0; y < 8; y++) {
+let led = [];
+for (let y = 0; y < 8; y++) {
   led[y] = [];
 }
 ```
@@ -111,10 +127,10 @@ for (var y = 0; y < 8; y++) {
 This array has 8 rows which each contain an empty array representing the columns. Each LED on the grid can have a brightness range of 0-15, where 0 is off and 15 is maximum brightness. The values in the array are initially undefined, but we can set them all to 0 as follows:
 
 ```javascript
-var led = [];
-for (var y = 0; y < 8; y++) {
+let led = [];
+for (let y = 0; y < 8; y++) {
   led[y] = [];
-  for (var x = 0; x < 16; x++) {
+  for (let x = 0; x < 16; x++) {
     led[y][x] = 0;
   }
 }
@@ -134,7 +150,7 @@ And finally, to copy this entire array to the grid:
 grid.refresh(led);
 ```
 
-As seen in *grid\_studies\_2.js* we place this code inside the `refresh()` function. Upon running the sketch you will see this:
+As seen in *grid\_studies\_2.js* we place this code inside the `refresh()` function - itself, part of the async function `run`. Note that we run the `refresh` function 60 times a second, using `setInterval` Upon running the sketch you will see this:
 
 ![](images/grid-studies-nodejs-seen.jpg)
 
@@ -153,7 +169,7 @@ We add a boolean variable `dirty` to indicate if the grid needs to be refreshed.
 Now we change the grid display upon incoming key data:
 
 ```javascript
-grid.key(function (x, y, s) {
+grid.key((x, y, s) => {
   led[y][x] = s * 15;
   dirty = true;
 });
@@ -170,7 +186,7 @@ dirty = true;
 Once this flag is set, the grid will be updated on the next iteration of `refresh()`:
 
 ```javascript
-function refresh() {
+let refresh = function() {
   if(dirty) {
     grid.refresh(led);
     dirty = false;
@@ -180,11 +196,13 @@ function refresh() {
 
 Once we've refreshed the grid, we set the `dirty` flag to `false` so we're not needlessly refreshing.
 
-The `refresh()` function is called at 60fps unless you specify a different rate in the `setInterval(refresh, 1000 / 60)` such as `setInterval(refresh, 1000 / 10)` for 10fps. 
+The `refresh` function is called at 60fps unless you specify a different rate in the `setInterval(refresh, 1000 / 60)` such as `setInterval(refresh, 1000 / 10)` for 10fps. 
+
+As always, we wrap everything in an `async` function; see `grid_studies_2_3.js` for reference
 
 ### 2.4 Decoupled interaction
 
-The most basic decoupled interaction is a toggle. Turn the grid into a huge bank of toggles simply by changing line 27 (which is in the `grid.key` callback function):
+The most basic decoupled interaction is a toggle. Turn the grid into a huge bank of toggles simply by changing line 30 (which is in the `grid.key` callback function):
 
 ```javascript
 if(s == 1) led[y][x] ^= 15;
