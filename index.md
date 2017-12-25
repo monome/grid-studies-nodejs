@@ -242,17 +242,19 @@ If this condition is true, we toggle the corresponding position in the `step` da
 We will "build" the LED display from scratch each time we need to refresh. This will be done inside of `refresh()` so we no longer need the `led` array to be global. Below we simply copy the `step` data to the `led` array, doing the proper multiplication by 15 in order to get full brightness.
 
 ```javascript
-if(dirty) {
-	led = create2DArray(8, 16);
-	    
-  // display steps
-  for(var x=0;x<16;x++)
-    for(var y=0;y<6;y++)
-      led[y][x] = step[y][x] * 15;
+let refresh = function() {
+  if(dirty) {
+    let led = create2DArray(8, 16);
 
-  // update grid
-  grid.refresh(led);
-  dirty = false;
+    // display steps
+    for (let x=0;x<16;x++)
+      for (let y=0;y<6;y++)
+        led[y][x] = step[y][x] * 15;
+
+    // update grid
+    grid.refresh(led);
+    dirty = false;
+  }
 }
 ```	
 
@@ -265,46 +267,45 @@ That'll get us started.
 For simplicity we're going to make a not-very-smart timer to drive our sequencer. Basically we'll count `refresh()` cycles and upon matching a specified interval, we'll take a step forward in the sequence.
 
 ```javascript
-var timer = 0;
-var play_position = 0;
-var STEP_TIME = 10;
-
+let timer = 0;
+let play_position = 0;
+const STEP_TIME = 10;
 // ...
 
-public void refresh() {
+let refresh = function() {
   if(timer == STEP_TIME) {
     if(play_position == 15)
       play_position = 0;
     else
       play_position++;
-    
+
     timer = 0;
     dirty = true;
   }
   else timer++;
-  
-  // ...
+
+// ...
 ```
 
-In `refresh()` we check `timer` against `STEP_TIME`. If they are equal, we process the next step, which in this case simply means incrementing `play_position`, which must be wrapped to 0 if it's at the end. We reset `timer` so it can count back up, and set the dirty flag so the grid redraws.
+In `refresh` we check `timer` against `STEP_TIME`. If they are equal, we process the next step, which in this case simply means incrementing `play_position`, which must be wrapped to 0 if it's at the end. We reset `timer` so it can count back up, and set the dirty flag so the grid redraws.
 
-You can change the speed by altering `STEP_TIME`.
+You can change the speed by altering `STEP_TIME`. (We've made it a constant, for now, assuming that it won't change during the running of the script. If you want to alter the tempo, it'll have to become a regular variable.
 
 For the redraw we add highlighting for the play position. Note how the multiply by 15 has been decreased to 11 to provide another mid-level brightness. We now have a series of brightness levels helping to indicate playback, lit keys, and currently active keys:
 
 ```javascript
-var highlight = 0;
+let highlight = 0;
 
 // display steps
-for(var x=0;x<16;x++) {
-	// highlight the play position
- 	if(x == play_position)
-   		highlight = 4;
-	else 
-   		highlight = 0;
-   
- 	for(var y=0;y<6;y++)
-   		led[y][x] = step[y][x] * 11 + highlight;
+for (let x=0;x<16;x++) {
+  // highlight the play position
+  if(x == play_position)
+    highlight = 4;
+  else
+    highlight = 0;
+
+  for (let y=0;y<6;y++)
+    led[y][x] = step[y][x] * 11 + highlight;
 }
 ```
 
