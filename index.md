@@ -22,7 +22,8 @@ Download the code examples here: [github.com/monome/grid-studies-nodejs/releases
 
 ## Initial Project Setup
 
-First install node.js.  This [guide](https://github.com/joyent/node/wiki/installation) may be helpful.  You may need to look into [node-gyp](https://github.com/TooTallNate/node-gyp) if you're on Windows.  This tutorial isn't recommended for new node.js users on Windows.
+First install node.js. The [official
+installers](https://nodejs.org/en/download/) for your platform of choice are recommended. (This guide presumes you're running either Mac OSX or Unix/Linux; whilst it should work on Windows, the examples are given for a Unix shell).
 
 Once installed, open a terminal window and create a new folder:  
 
