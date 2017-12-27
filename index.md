@@ -22,7 +22,8 @@ Download the code examples here: [github.com/monome/grid-studies-nodejs/releases
 
 ## Initial Project Setup
 
-First install node.js.  This [guide](https://github.com/joyent/node/wiki/installation) may be helpful.  You may need to look into [node-gyp](https://github.com/TooTallNate/node-gyp) if you're on Windows.  This tutorial isn't recommended for new node.js users on Windows.
+First install node.js. The [official
+installers](https://nodejs.org/en/download/) for your platform of choice are recommended. (This guide presumes you're running either Mac OSX or Unix/Linux; whilst it should work on Windows, the examples are given for a Unix shell).
 
 Once installed, open a terminal window and create a new folder:  
 
@@ -57,16 +58,32 @@ $ node grid_studies_2.js
 
 ## 1. Connect
 
-The monome-grid library facilitates easy connection and communication with grids. Connect to a grid with the following code:
+The `monome-grid` library facilitates easy connection and communication with grids. It uses the modern javascript idiom of 'async/await' to reflect that grid code can't run until the grid has properly been initialised. 
+
+First, require the `monome-grid` library:
 
 ```javascript
-grid = require('monome-grid')();
+const monomeGrid = require('monome-grid');
+```
+
+Then, connect to the grid inside an asynchronous function like so:
+
+```javascript
+async function run() {
+  let grid = await monomeGrid(); 
+}
+
+run()
 ```
 
 Here the first monome device found is attached. If you want to connect to a specific grid (if you have more than one connected) you can specify a serial number, which can be found using *serialosc-monitor*.
 
-```java
-grid = require('monome-grid')('m1000011');
+```javascript
+async function run() {
+  let grid = await monomeGrid('m1000011');
+}
+
+run()
 ```
 
 The library communicates with *serialosc* to discover attached devices using OSC. For a detailed description of how the mechanism and protocol work, see [monome.org/docs/tech:osc](http://monome.org/docs/tech:osc).
@@ -85,12 +102,10 @@ The monome-grid library calls the function passed to `grid.key()` upon receiving
 	y : vertical position (0-7)
 	s : state (1 = key down, 0 = key up)
 
-Below we define the key function and simply print out incoming data.
+Inside our aysnc function, we define the key function and simply print out incoming data.
 
 ```javascript
-grid.key(function(x, y, s) {
-  console.log('key received: ' + x + ', ' + y + ', ' + s);
-});
+grid.key((x, y, s) => console.log(`key received: ${x}, ${y}, $[s}`));
 ```
 
 We will, of course, do more interesting things with this function in the future.
@@ -99,11 +114,11 @@ We will, of course, do more interesting things with this function in the future.
 
 Use the `grid.refresh()` function to update the state of the LEDs on the grid. This function accepts an array which represents the entire grid, hence the full frame is updated on each call.
 
-First create the 2-dimensional array:
+First, inside the async function, create the 2-dimensional array:
 
 ```javascript
-var led = [];
-for (var y = 0; y < 8; y++) {
+let led = [];
+for (let y = 0; y < 8; y++) {
   led[y] = [];
 }
 ```
@@ -111,10 +126,10 @@ for (var y = 0; y < 8; y++) {
 This array has 8 rows which each contain an empty array representing the columns. Each LED on the grid can have a brightness range of 0-15, where 0 is off and 15 is maximum brightness. The values in the array are initially undefined, but we can set them all to 0 as follows:
 
 ```javascript
-var led = [];
-for (var y = 0; y < 8; y++) {
+let led = [];
+for (let y = 0; y < 8; y++) {
   led[y] = [];
-  for (var x = 0; x < 16; x++) {
+  for (let x = 0; x < 16; x++) {
     led[y][x] = 0;
   }
 }
@@ -134,7 +149,7 @@ And finally, to copy this entire array to the grid:
 grid.refresh(led);
 ```
 
-As seen in *grid\_studies\_2.js* we place this code inside the `refresh()` function. Upon running the sketch you will see this:
+As seen in *grid\_studies\_2.js* we place this code inside the `refresh()` function - itself, part of the async function `run`. Note that we run the `refresh` function 60 times a second, using `setInterval` Upon running the sketch you will see this:
 
 ![](images/grid-studies-nodejs-seen.jpg)
 
@@ -153,7 +168,7 @@ We add a boolean variable `dirty` to indicate if the grid needs to be refreshed.
 Now we change the grid display upon incoming key data:
 
 ```javascript
-grid.key(function (x, y, s) {
+grid.key((x, y, s) => {
   led[y][x] = s * 15;
   dirty = true;
 });
@@ -170,7 +185,7 @@ dirty = true;
 Once this flag is set, the grid will be updated on the next iteration of `refresh()`:
 
 ```javascript
-function refresh() {
+let refresh = function() {
   if(dirty) {
     grid.refresh(led);
     dirty = false;
@@ -180,11 +195,13 @@ function refresh() {
 
 Once we've refreshed the grid, we set the `dirty` flag to `false` so we're not needlessly refreshing.
 
-The `refresh()` function is called at 60fps unless you specify a different rate in the `setInterval(refresh, 1000 / 60)` such as `setInterval(refresh, 1000 / 10)` for 10fps. 
+The `refresh` function is called at 60fps unless you specify a different rate in the `setInterval(refresh, 1000 / 60)` such as `setInterval(refresh, 1000 / 10)` for 10fps. 
+
+As always, we wrap everything in an `async` function; see `grid_studies_2_3.js` for reference
 
 ### 2.4 Decoupled interaction
 
-The most basic decoupled interaction is a toggle. Turn the grid into a huge bank of toggles simply by changing line 27 (which is in the `grid.key` callback function):
+The most basic decoupled interaction is a toggle. Turn the grid into a huge bank of toggles simply by changing line 30 (which is in the `grid.key` callback function):
 
 ```javascript
 if(s == 1) led[y][x] ^= 15;
@@ -224,17 +241,19 @@ If this condition is true, we toggle the corresponding position in the `step` da
 We will "build" the LED display from scratch each time we need to refresh. This will be done inside of `refresh()` so we no longer need the `led` array to be global. Below we simply copy the `step` data to the `led` array, doing the proper multiplication by 15 in order to get full brightness.
 
 ```javascript
-if(dirty) {
-	led = create2DArray(8, 16);
-	    
-  // display steps
-  for(var x=0;x<16;x++)
-    for(var y=0;y<6;y++)
-      led[y][x] = step[y][x] * 15;
+let refresh = function() {
+  if(dirty) {
+    let led = create2DArray(8, 16);
 
-  // update grid
-  grid.refresh(led);
-  dirty = false;
+    // display steps
+    for (let x=0;x<16;x++)
+      for (let y=0;y<6;y++)
+        led[y][x] = step[y][x] * 15;
+
+    // update grid
+    grid.refresh(led);
+    dirty = false;
+  }
 }
 ```	
 
@@ -244,49 +263,48 @@ That'll get us started.
 
 *See grid\_studies\_3_2.js for this step.*
 
-For simplicity we're going to make a not-very-smart timer to drive our sequencer. Basically we'll count `refresh()` cycles and upon matching a specified interval, we'll take a step forward in the sequence.
+For simplicity we're going to make a not-very-smart timer to drive our sequencer. Basically we'll count `refresh` cycles and upon matching a specified interval, we'll take a step forward in the sequence.
 
 ```javascript
-var timer = 0;
-var play_position = 0;
-var STEP_TIME = 10;
-
+let timer = 0;
+let play_position = 0;
+const STEP_TIME = 10;
 // ...
 
-public void refresh() {
+let refresh = function() {
   if(timer == STEP_TIME) {
     if(play_position == 15)
       play_position = 0;
     else
       play_position++;
-    
+
     timer = 0;
     dirty = true;
   }
   else timer++;
-  
-  // ...
+
+// ...
 ```
 
-In `refresh()` we check `timer` against `STEP_TIME`. If they are equal, we process the next step, which in this case simply means incrementing `play_position`, which must be wrapped to 0 if it's at the end. We reset `timer` so it can count back up, and set the dirty flag so the grid redraws.
+In `refresh` we check `timer` against `STEP_TIME`. If they are equal, we process the next step, which in this case simply means incrementing `play_position`, which must be wrapped to 0 if it's at the end. We reset `timer` so it can count back up, and set the dirty flag so the grid redraws.
 
-You can change the speed by altering `STEP_TIME`.
+You can change the speed by altering `STEP_TIME`. (We've made it a constant, for now, assuming that it won't change during the running of the script. If you want to alter the tempo, it'll have to become a regular variable.
 
 For the redraw we add highlighting for the play position. Note how the multiply by 15 has been decreased to 11 to provide another mid-level brightness. We now have a series of brightness levels helping to indicate playback, lit keys, and currently active keys:
 
 ```javascript
-var highlight = 0;
+let highlight = 0;
 
 // display steps
-for(var x=0;x<16;x++) {
-	// highlight the play position
- 	if(x == play_position)
-   		highlight = 4;
-	else 
-   		highlight = 0;
-   
- 	for(var y=0;y<6;y++)
-   		led[y][x] = step[y][x] * 11 + highlight;
+for (let x=0;x<16;x++) {
+  // highlight the play position
+  if(x == play_position)
+    highlight = 4;
+  else
+    highlight = 0;
+
+  for (let y=0;y<6;y++)
+    led[y][x] = step[y][x] * 11 + highlight;
 }
 ```
 
@@ -301,30 +319,35 @@ When the playhead advances to a new row we want something to happen which corres
 Drawing the trigger row happens entirely in the `refresh()`:
 
 ```javascript
-// draw trigger bar and on-states
-for(int x=0;x<16;x++)
-	led[6][x] = 4;    
-for(int y=0;y<6;y++)
-	if(step[y][play_position] == 1)
-		led[6][y] = 15;
+for(let x=0;x<16;x++) {
+  led[6][x] = 4;
+}
+
+for(let y=0;y<6;y++) {
+  if(step[y][play_position] == 1) {
+    led[6][y] = 15;
+  }
+}
 ```
 
 First we create a dim row (level 4 is fairly dim). Then we search through the `step` array at the current play position, showing a bright indicator for each on state. This displays a sort of horizontal correlation of rows (or "channels") 1-6 current state.
 
-For the screen drawing, we create a function `trigger()` which gets passed values of activated steps. This is what we do, inside `refresh()` right after we change `play_position':
+For the screen drawing, we create a function `trigger` which gets passed values of activated steps. This is what we do, inside `refresh` right after we change `play_position':
 
 ```javascript
 // TRIGGER SOMETHING
-for(int y=0;y<6;y++)
-	if(step[y][play_position] == 1)
-		trigger(y);
+for(let y=0;y<6;y++) {
+  if(step[y][play_position] == 1) {
+    trigger(y);
+  }
+}
 ```
 
-And then `trigger()` itself:
+And then `trigger` itself:
 
-```java
-function trigger(i) {
-  console.log('trigger at ' + i)
+```javascript
+let trigger = function(i) {
+  console.log(`trigger at ${i}`);
 }
 ```
 
@@ -343,7 +366,7 @@ led[7][play_position] = 15;
 Now we look for key presses in the last row, in the `key` function:
 
 ```javascript
-grid.key(function (x, y, s) {
+grid.key((x, y, s) => {
   // toggle steps
   if(s == 1 && y < 6) {
     step[y][x] ^= 1;
@@ -381,10 +404,10 @@ Now, when pressing keys on the bottom row it will cue the next position to be pl
 Lastly, we'll implement setting the loop start and end points with a two-press gesture: pressing and holding the start point, and pressing an end point while still holding the first key. We'll need to add a variable to count keys held, one to track the last key pressed, and variables to store the loop positions.
 
 ```javascript
-var keys_held = 0
-var key_last = 0;
-var loop_start = 0
-var loop_end = 15;
+let keys_held = 0
+let key_last = 0;
+let loop_start = 0
+let loop_end = 15;
 ```
 
 We set loop_end to 15 to begin with the full range. We count keys held on the bottom row thusly:
@@ -438,16 +461,16 @@ Done!
 Let's make it actually send some MIDI notes.  The `easymidi` module can be used to create and listen to all types of MIDI events.  First we'll get some basic initialization out of the way by loading the `easymidi` module and creating a virtual MIDI input and output:
 
 ```javascript
-var easymidi = require('easymidi');
+const easymidi = require('easymidi');
 
-var output = new easymidi.Output('grid out', true);
-var input = new easymidi.Input('grid in', true);
+const output = new easymidi.Output('grid out', true);
+const input = new easymidi.Input('grid in', true);
 ```
 
 Next let's implement the trigger method and make it actually do something.  We're going to add a new variable called `type` that will take the values `noteon` or `noteoff`:
 
 ```javascript
-function trigger(type, i) {
+let trigger = function(type, i) {
   output.send(type, {
     note: 36 + i,
     velocity: 127,
@@ -460,10 +483,10 @@ Next we need to modify the code that calls trigger to pass it the `type` argumen
 
 ```javascript
 // TRIGGER SOMETHING
-var last_play_position = play_position - 1;
+let last_play_position = play_position - 1;
 if(last_play_position == -1)
   last_play_position = 15;
-for(var y=0;y<6;y++) {
+for(let y=0;y<6;y++) {
   if(step[y][last_play_position] == 1)
     trigger('noteoff', y);
   if(step[y][play_position] == 1)
@@ -474,19 +497,19 @@ for(var y=0;y<6;y++) {
 Now if you open Ableton Live for example, you should see a "grid out" device that you can enable and route to an instrument.  You can also route the notes to a real MIDI device by changing this line:
 
 ```javascript
-var output = new easymidi.Output('grid out', true);
+let output = new easymidi.Output('grid out', true);
 ```
 
 To something like this:
 
 ```javascript
-var output = new easymidi.Output('Real Device Name');
+let output = new easymidi.Output('Real Device Name');
 ```
 
 The `true` argument means create a virtual device so don't use that when interfacing with a real MIDI output.  If you aren't sure what the names of your devices are you can create a small script to check:
 
 ```javascript
-var easymidi = require('easymidi');
+let easymidi = require('easymidi');
 console.log(easymidi.getOutputs());
 ```
 
@@ -497,9 +520,9 @@ Save this as `listmidi.js` and run it on the command line with `node listmidi.js
 Now we'll make the sequencer respond to MIDI clock messages.  First, we can delete the STEP_TIME and timer variables as they are no longer needed.  We'll also want to move the code that handles timing out of the `refresh()` function and into a few event handlers.  Here's the main event handler to listen for midi clock messages:
 
 ```javascript
-var ticks = 0;
+let ticks = 0;
 
-input.on('clock', function () {
+input.on('clock', () => {
   ticks++;
   if(ticks % 12 != 0)
     return;
@@ -514,10 +537,10 @@ input.on('clock', function () {
     play_position++;
 
   // TRIGGER SOMETHING
-  var last_play_position = play_position - 1;
+  let last_play_position = play_position - 1;
   if(last_play_position == -1)
     last_play_position = 15;
-  for(var y=0;y<6;y++) {
+  for(let y=0;y<6;y++) {
     if(step[y][last_play_position] == 1)
       trigger('noteoff', y);
     if(step[y][play_position] == 1)
@@ -534,9 +557,9 @@ This is mostly a re-arrangement of existing code but there is a new variable cal
 MIDI clock messages come in at a rate of 96 per measure, so on each tick we'll check if it's divisible evenly by 12 to provide 8th note resolution:
 
 ```javascript
-  ticks++;
-  if(ticks % 12 != 0)
-    return;
+ticks++;
+if(ticks % 12 != 0)
+  return;
 ```
 
 First we increment `ticks` and then do the divisibility check.  If it's not divisible by 12 we'll return out of the function and wait for the next tick.  If it is divisible we'll advance the play_position and trigger noteoff/noteon messages as needed.
@@ -544,8 +567,8 @@ First we increment `ticks` and then do the divisibility check.  If it's not divi
 This mostly works but we need to account for a few other MIDI messages.  For example, this won't trigger notes in the first `play_position`.  To trigger these notes we'll listen for the 'start' MIDI message:
 
 ```javascript
-input.on('start', function () {
-  for(var y=0;y<6;y++)
+input.on('start', () => {
+  for(let y=0;y<6;y++)
     if(step[y][play_position] == 1)
       trigger('noteon', y);
 });
@@ -553,7 +576,7 @@ input.on('start', function () {
 
 Another issue we have is that if we reset the play position to 0 in our DAW we we still might be halfway through playing the segment on the sequencer.  We should reset the `play_position` and `ticks` if this occurs:
 
-input.on('position', function (data) {
+input.on('position', (data) => {
   if(data.value != 0)
     return;
   ticks = 0;
@@ -578,10 +601,10 @@ And that's it! We have a fully functioning MIDI sequencer that can sync to MIDI 
 
 ## Credits
 
-*Node.js* is maintained by the [Joyent](http://www.joyent.com).
+*Node.js* is maintained by [Joyent](http://www.joyent.com).
 
 The *monome-grid* library was written and is maintained by [Tom Dinchak](https://soundcloud.com/phortran).
 
-This tutorial was created by [Tom Dinchak](https://soundcloud.com/phortran) for [monome.org](monome.org).
+This tutorial was created by [Tom Dinchak](https://soundcloud.com/phortran) and [Tom Armitage](https://tomarmitage.com) for [monome.org](monome.org).
 
 Contributions welcome. Submit a pull request to [github.com/monome/grid-studies-nodejs](https://github.com/monome/grid-studies-nodejs) or e-mail [info@monome.org](mailto:info@monome.org).

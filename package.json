@@ -10,14 +10,14 @@
     "type": "git",
     "url": "https://github.com/monome/grid-studies-nodejs.git"
   },
-  "author": "Tom Dinchak",
+  "contributors": ["Tom Dinchak", "Tom Armitage"],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/monome/grid-studies-nodejs/issues"
   },
   "homepage": "https://github.com/monome/grid-studies-nodejs",
   "dependencies": {
-    "easymidi": "0.0.2",
-    "monome-grid": "0.0.5"
+    "easymidi": "0.0.4",
+    "monome-grid": "1.0.2"
   }
 }
