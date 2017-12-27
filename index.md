@@ -365,7 +365,7 @@ led[7][play_position] = 15;
 Now we look for key presses in the last row, in the `key` function:
 
 ```javascript
-grid.key(function (x, y, s) {
+grid.key((x, y, s) => {
   // toggle steps
   if(s == 1 && y < 6) {
     step[y][x] ^= 1;
@@ -403,10 +403,10 @@ Now, when pressing keys on the bottom row it will cue the next position to be pl
 Lastly, we'll implement setting the loop start and end points with a two-press gesture: pressing and holding the start point, and pressing an end point while still holding the first key. We'll need to add a variable to count keys held, one to track the last key pressed, and variables to store the loop positions.
 
 ```javascript
-var keys_held = 0
-var key_last = 0;
-var loop_start = 0
-var loop_end = 15;
+let keys_held = 0
+let key_last = 0;
+let loop_start = 0
+let loop_end = 15;
 ```
 
 We set loop_end to 15 to begin with the full range. We count keys held on the bottom row thusly:
@@ -460,16 +460,16 @@ Done!
 Let's make it actually send some MIDI notes.  The `easymidi` module can be used to create and listen to all types of MIDI events.  First we'll get some basic initialization out of the way by loading the `easymidi` module and creating a virtual MIDI input and output:
 
 ```javascript
-var easymidi = require('easymidi');
+const easymidi = require('easymidi');
 
-var output = new easymidi.Output('grid out', true);
-var input = new easymidi.Input('grid in', true);
+const output = new easymidi.Output('grid out', true);
+const input = new easymidi.Input('grid in', true);
 ```
 
 Next let's implement the trigger method and make it actually do something.  We're going to add a new variable called `type` that will take the values `noteon` or `noteoff`:
 
 ```javascript
-function trigger(type, i) {
+let trigger = function(type, i) {
   output.send(type, {
     note: 36 + i,
     velocity: 127,
@@ -482,10 +482,10 @@ Next we need to modify the code that calls trigger to pass it the `type` argumen
 
 ```javascript
 // TRIGGER SOMETHING
-var last_play_position = play_position - 1;
+let last_play_position = play_position - 1;
 if(last_play_position == -1)
   last_play_position = 15;
-for(var y=0;y<6;y++) {
+for(let y=0;y<6;y++) {
   if(step[y][last_play_position] == 1)
     trigger('noteoff', y);
   if(step[y][play_position] == 1)
@@ -496,19 +496,19 @@ for(var y=0;y<6;y++) {
 Now if you open Ableton Live for example, you should see a "grid out" device that you can enable and route to an instrument.  You can also route the notes to a real MIDI device by changing this line:
 
 ```javascript
-var output = new easymidi.Output('grid out', true);
+let output = new easymidi.Output('grid out', true);
 ```
 
 To something like this:
 
 ```javascript
-var output = new easymidi.Output('Real Device Name');
+let output = new easymidi.Output('Real Device Name');
 ```
 
 The `true` argument means create a virtual device so don't use that when interfacing with a real MIDI output.  If you aren't sure what the names of your devices are you can create a small script to check:
 
 ```javascript
-var easymidi = require('easymidi');
+let easymidi = require('easymidi');
 console.log(easymidi.getOutputs());
 ```
 
@@ -519,9 +519,9 @@ Save this as `listmidi.js` and run it on the command line with `node listmidi.js
 Now we'll make the sequencer respond to MIDI clock messages.  First, we can delete the STEP_TIME and timer variables as they are no longer needed.  We'll also want to move the code that handles timing out of the `refresh()` function and into a few event handlers.  Here's the main event handler to listen for midi clock messages:
 
 ```javascript
-var ticks = 0;
+let ticks = 0;
 
-input.on('clock', function () {
+input.on('clock', () => {
   ticks++;
   if(ticks % 12 != 0)
     return;
@@ -536,10 +536,10 @@ input.on('clock', function () {
     play_position++;
 
   // TRIGGER SOMETHING
-  var last_play_position = play_position - 1;
+  let last_play_position = play_position - 1;
   if(last_play_position == -1)
     last_play_position = 15;
-  for(var y=0;y<6;y++) {
+  for(let y=0;y<6;y++) {
     if(step[y][last_play_position] == 1)
       trigger('noteoff', y);
     if(step[y][play_position] == 1)
@@ -556,9 +556,9 @@ This is mostly a re-arrangement of existing code but there is a new variable cal
 MIDI clock messages come in at a rate of 96 per measure, so on each tick we'll check if it's divisible evenly by 12 to provide 8th note resolution:
 
 ```javascript
-  ticks++;
-  if(ticks % 12 != 0)
-    return;
+ticks++;
+if(ticks % 12 != 0)
+  return;
 ```
 
 First we increment `ticks` and then do the divisibility check.  If it's not divisible by 12 we'll return out of the function and wait for the next tick.  If it is divisible we'll advance the play_position and trigger noteoff/noteon messages as needed.
@@ -566,8 +566,8 @@ First we increment `ticks` and then do the divisibility check.  If it's not divi
 This mostly works but we need to account for a few other MIDI messages.  For example, this won't trigger notes in the first `play_position`.  To trigger these notes we'll listen for the 'start' MIDI message:
 
 ```javascript
-input.on('start', function () {
-  for(var y=0;y<6;y++)
+input.on('start', () => {
+  for(let y=0;y<6;y++)
     if(step[y][play_position] == 1)
       trigger('noteon', y);
 });
@@ -575,7 +575,7 @@ input.on('start', function () {
 
 Another issue we have is that if we reset the play position to 0 in our DAW we we still might be halfway through playing the segment on the sequencer.  We should reset the `play_position` and `ticks` if this occurs:
 
-input.on('position', function (data) {
+input.on('position', (data) => {
   if(data.value != 0)
     return;
   ticks = 0;
