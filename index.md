@@ -6,6 +6,8 @@ Node.js is a platform built on Chrome's JavaScript runtime for easily building f
 
 Node.js is generally used to build web servers but can also be used to interface with monome devices, send and receive MIDI messages, or work with raw audio stream using the many modules available on [NPM](http://npmjs.org).
 
+The `monome-grid` library has been designed for the latest stable version of Node, currently 8.9.x .
+
 ## Prerequisites
 
 If you're very new to node.js (or JavaScript) a few tutorials and introduction videos have been provided below: 
