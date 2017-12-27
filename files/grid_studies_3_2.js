@@ -64,7 +64,6 @@ async function run() {
       dirty = true;
     }
   });
-
 }
 
 run();

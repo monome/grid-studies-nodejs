@@ -262,7 +262,7 @@ That'll get us started.
 
 *See grid\_studies\_3_2.js for this step.*
 
-For simplicity we're going to make a not-very-smart timer to drive our sequencer. Basically we'll count `refresh()` cycles and upon matching a specified interval, we'll take a step forward in the sequence.
+For simplicity we're going to make a not-very-smart timer to drive our sequencer. Basically we'll count `refresh` cycles and upon matching a specified interval, we'll take a step forward in the sequence.
 
 ```javascript
 let timer = 0;
@@ -318,30 +318,35 @@ When the playhead advances to a new row we want something to happen which corres
 Drawing the trigger row happens entirely in the `refresh()`:
 
 ```javascript
-// draw trigger bar and on-states
-for(int x=0;x<16;x++)
-	led[6][x] = 4;    
-for(int y=0;y<6;y++)
-	if(step[y][play_position] == 1)
-		led[6][y] = 15;
+for(let x=0;x<16;x++) {
+  led[6][x] = 4;
+}
+
+for(let y=0;y<6;y++) {
+  if(step[y][play_position] == 1) {
+    led[6][y] = 15;
+  }
+}
 ```
 
 First we create a dim row (level 4 is fairly dim). Then we search through the `step` array at the current play position, showing a bright indicator for each on state. This displays a sort of horizontal correlation of rows (or "channels") 1-6 current state.
 
-For the screen drawing, we create a function `trigger()` which gets passed values of activated steps. This is what we do, inside `refresh()` right after we change `play_position':
+For the screen drawing, we create a function `trigger` which gets passed values of activated steps. This is what we do, inside `refresh` right after we change `play_position':
 
 ```javascript
 // TRIGGER SOMETHING
-for(int y=0;y<6;y++)
-	if(step[y][play_position] == 1)
-		trigger(y);
+for(let y=0;y<6;y++) {
+  if(step[y][play_position] == 1) {
+    trigger(y);
+  }
+}
 ```
 
-And then `trigger()` itself:
+And then `trigger` itself:
 
-```java
-function trigger(i) {
-  console.log('trigger at ' + i)
+```javascript
+let trigger = function(i) {
+  console.log(`trigger at ${i}`);
 }
 ```
 
